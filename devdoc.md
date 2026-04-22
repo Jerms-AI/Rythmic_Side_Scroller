@@ -111,7 +111,11 @@ Rhythm engine falls back to BPM clock if JSON is absent. Tap-calibration (T key 
 ### Phase 3 — Content & Polish
 - ✅ Player sprite set generated (see `assets/sprites/player/`)
 - ✅ Enemy grunt sprite set — Last Dragon / Sho'nuff crew aesthetic (`assets/sprites/enemies/grunt/`)
-- ✅ Sprite white background removal pipeline (`strip_bg.py`, auto-runs in `sprite_gen.py`)
+  - AnimatedSprite2D wired, faces player each frame via `_face_player()`
+  - Idle/walk/punch animations, modulate hit flashes
+- ✅ Sprite background removal pipeline (`strip_bg.py`, auto-runs in `sprite_gen.py`)
+  - Flood fill threshold 230, feather 200 (catches near-white and fake checkerboard ~235 pixels)
+  - Enemy grunt re-stripped at feather 180 to clear inner-arm fringe
 - ✅ Parallax background — 4-layer street-level night scene wired into `main.tscn` (sky, mid alley, near wall, perspective floor)
 - ✅ Player camera follow
 - Player HP and death
