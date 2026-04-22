@@ -36,6 +36,10 @@ func _ready() -> void:
 	rhythm_engine.beat_hit.connect(_on_beat)
 
 
+func _face_player() -> void:
+	sprite.flip_h = global_position.x < player.global_position.x
+
+
 func _physics_process(delta: float) -> void:
 	if state == State.DEAD:
 		return
@@ -50,13 +54,14 @@ func _physics_process(delta: float) -> void:
 		if _combo_timer <= 0.0:
 			_combo_stage = 0
 
+	_face_player()
+
 	match state:
 		State.APPROACH:
 			var dist := global_position.distance_to(player.global_position)
 			if dist > ATTACK_RANGE:
 				var dir := (player.global_position - global_position).normalized()
 				velocity.x = dir.x * SPEED
-				sprite.flip_h = velocity.x > 0
 				if sprite.animation != "walk":
 					sprite.play("walk")
 			else:

@@ -92,9 +92,9 @@ def strip(path: Path, threshold: int, feather_threshold: int) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("files", nargs="+", help="PNG files to process")
-    parser.add_argument("--threshold", type=int, default=240,
+    parser.add_argument("--threshold", type=int, default=230,
                         help="Flood fill threshold (pixels above this become transparent)")
-    parser.add_argument("--feather", type=int, default=210,
+    parser.add_argument("--feather", type=int, default=200,
                         help="Edge feather threshold (bright edge pixels fade in below this)")
     args = parser.parse_args()
 

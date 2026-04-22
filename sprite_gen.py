@@ -77,7 +77,7 @@ def pil_to_bytes(img: Image.Image) -> bytes:
     return buf.getvalue()
 
 
-def strip_white_bg(path: Path, threshold: int = 240, feather_threshold: int = 210) -> None:
+def strip_white_bg(path: Path, threshold: int = 230, feather_threshold: int = 200) -> None:
     import numpy as np
     from collections import deque
     img = Image.open(path).convert("RGBA")
