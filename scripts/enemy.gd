@@ -37,7 +37,7 @@ func _ready() -> void:
 
 
 func _face_player() -> void:
-	sprite.flip_h = global_position.x < player.global_position.x
+	sprite.flip_h = global_position.x > player.global_position.x
 
 
 func _physics_process(delta: float) -> void:
