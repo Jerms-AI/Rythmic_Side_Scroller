@@ -9,7 +9,6 @@ const PUNCH_DURATION := 0.25
 var state: State = State.IDLE
 var _state_timer := 0.0
 var _facing := 1
-var _fist: ColorRect
 var _shield: ColorRect
 
 @onready var sprite: AnimatedSprite2D = $Sprite
@@ -18,12 +17,6 @@ var _shield: ColorRect
 
 
 func _ready() -> void:
-	_fist = ColorRect.new()
-	_fist.size = Vector2(96, 96)
-	_fist.color = Color(0.7, 0.85, 1.0, 1)
-	_fist.visible = false
-	add_child(_fist)
-
 	_shield = ColorRect.new()
 	_shield.size = Vector2(84, 84)
 	_shield.color = Color(0.95, 0.85, 0.2, 1)
@@ -106,31 +99,24 @@ func _enter_state(new_state: State) -> void:
 		State.PUNCH:
 			_state_timer = PUNCH_DURATION
 			hitbox.set_deferred("monitoring", true)
-			_fist.position = Vector2(168 * _facing, -228)
-			_fist.visible = true
 			_shield.visible = false
 			sprite.play("punch")
 		State.BLOCK:
 			hitbox.set_deferred("monitoring", false)
-			_fist.visible = false
 			_shield.position = Vector2(132 * _facing, -270)
 			_shield.visible = true
 			sprite.play("block")
 		State.DUCK:
 			hitbox.set_deferred("monitoring", false)
-			_fist.visible = false
 			_shield.visible = false
 			sprite.play("crouch")
 		State.UPPERCUT:
 			_state_timer = PUNCH_DURATION
 			hitbox.set_deferred("monitoring", true)
-			_fist.position = Vector2(84 * _facing, -480)
-			_fist.visible = true
 			_shield.visible = false
 			sprite.play("uppercut")
 		State.IDLE, State.WALK:
 			hitbox.set_deferred("monitoring", false)
-			_fist.visible = false
 			_shield.visible = false
 			sprite.play("idle")
 

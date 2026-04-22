@@ -13,7 +13,6 @@ var hp := 1
 var state: State = State.APPROACH
 var _state_timer := 0.0
 var _attack_timer := 0.0
-var _fist: ColorRect
 var _beat_count := 0
 var _combo_stage := 0  # 0=none  1=onbeat(wait offbeat)  2=blocked(wait offbeat)  3=blocked+offbeat(wait onbeat)  4=triple done(wait onbeat for quad)
 var _combo_timer := 0.0
@@ -27,17 +26,12 @@ const CHARGE_RATE := 0.8
 
 
 func _ready() -> void:
-	_fist = ColorRect.new()
-	_fist.size = Vector2(72, 72)
-	_fist.color = Color(0.1, 0.9, 0.2, 1)
-	_fist.visible = false
-	add_child(_fist)
 	sprite.play("idle")
 	rhythm_engine.beat_hit.connect(_on_beat)
 
 
 func _face_player() -> void:
-	sprite.flip_h = global_position.x > player.global_position.x
+	sprite.flip_h = global_position.x < player.global_position.x
 
 
 func _physics_process(delta: float) -> void:
@@ -84,7 +78,6 @@ func _physics_process(delta: float) -> void:
 		State.PUNCH:
 			velocity.x = 0.0
 			if _state_timer <= 0.0:
-				_fist.visible = false
 				_attack_timer = ATTACK_COOLDOWN
 				state = State.ATTACK
 				sprite.play("idle")
@@ -117,9 +110,6 @@ func _enter_punch() -> void:
 	sprite.play("punch")
 	state = State.PUNCH
 	_state_timer = PUNCH_DURATION
-	var dir_to_player: float = sign(player.global_position.x - global_position.x)
-	_fist.position = Vector2(132 * dir_to_player, -228)
-	_fist.visible = true
 	var dist := global_position.distance_to(player.global_position)
 	if dist <= ATTACK_RANGE:
 		if player.is_blocking():
