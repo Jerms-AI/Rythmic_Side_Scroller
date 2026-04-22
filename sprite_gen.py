@@ -77,12 +77,14 @@ def pil_to_bytes(img: Image.Image) -> bytes:
     return buf.getvalue()
 
 
-def strip_white_bg(path: Path, threshold: int = 240) -> None:
+def strip_white_bg(path: Path, threshold: int = 240, feather_threshold: int = 210) -> None:
     import numpy as np
     from collections import deque
     img = Image.open(path).convert("RGBA")
     arr = np.array(img)
     h, w = arr.shape[:2]
+
+    # Flood fill from edges
     visited = np.zeros((h, w), dtype=bool)
     queue = deque()
     for x in range(w):
@@ -103,6 +105,22 @@ def strip_white_bg(path: Path, threshold: int = 240) -> None:
                 ny, nx = y + dy, x + dx
                 if 0 <= ny < h and 0 <= nx < w and not visited[ny, nx]:
                     queue.append((ny, nx))
+
+    # Feather edges — fade near-white fringe pixels adjacent to transparent
+    for _ in range(2):
+        transparent = (arr[:, :, 3] == 0)
+        edge = np.zeros(transparent.shape, dtype=bool)
+        edge[1:]    |= transparent[:-1]
+        edge[:-1]   |= transparent[1:]
+        edge[:, 1:] |= transparent[:, :-1]
+        edge[:, :-1] |= transparent[:, 1:]
+        edge &= ~transparent
+        brightness = (arr[:,:,0].astype(np.float32) + arr[:,:,1].astype(np.float32) + arr[:,:,2].astype(np.float32)) / 3.0
+        fade_mask = edge & (brightness > feather_threshold)
+        fade_amount = np.clip((brightness - feather_threshold) / (255.0 - feather_threshold), 0.0, 1.0)
+        new_alpha = np.clip(255.0 * (1.0 - fade_amount), 0, 255).astype(np.uint8)
+        arr[:, :, 3] = np.where(fade_mask, new_alpha, arr[:, :, 3])
+
     Image.fromarray(arr).save(path)
 
 

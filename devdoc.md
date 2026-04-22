@@ -110,6 +110,7 @@ Rhythm engine falls back to BPM clock if JSON is absent. Tap-calibration (T key 
 
 ### Phase 3 — Content & Polish
 - ✅ Player sprite set generated (see `assets/sprites/player/`)
+- ✅ Enemy grunt sprite set — Last Dragon / Sho'nuff crew aesthetic (`assets/sprites/enemies/grunt/`)
 - ✅ Sprite white background removal pipeline (`strip_bg.py`, auto-runs in `sprite_gen.py`)
 - ✅ Parallax background — 4-layer street-level night scene wired into `main.tscn` (sky, mid alley, near wall, perspective floor)
 - ✅ Player camera follow
@@ -213,6 +214,7 @@ Rythmic_Side_Scroller/
     ├── beat_maps/
     └── sprites/
         ├── player/           # final selected sprites (13 files, transparent)
+        ├── enemies/grunt/    # 7 frames: idle x3, walk x2, punch x2
         ├── background/       # parallax layers: bg_sky_v2_2, bg_mid_v2_2, bg_near_v2_1, bg_floor_v2_2
         └── generated/        # raw AI generation output
 ```

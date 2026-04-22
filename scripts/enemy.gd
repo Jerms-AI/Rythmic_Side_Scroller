@@ -21,7 +21,7 @@ const COMBO_WINDOW := 0.6
 var _charge := 0.0
 const CHARGE_RATE := 0.8
 
-@onready var sprite: ColorRect = $Sprite
+@onready var sprite: AnimatedSprite2D = $Sprite
 @onready var player: CharacterBody2D = get_node("/root/Main/Player")
 @onready var rhythm_engine: Node = get_node("/root/Main/RhythmEngine")
 
@@ -32,7 +32,7 @@ func _ready() -> void:
 	_fist.color = Color(0.1, 0.9, 0.2, 1)
 	_fist.visible = false
 	add_child(_fist)
-	sprite.pivot_offset = Vector2(90, 180)
+	sprite.play("idle")
 	rhythm_engine.beat_hit.connect(_on_beat)
 
 
@@ -56,14 +56,21 @@ func _physics_process(delta: float) -> void:
 			if dist > ATTACK_RANGE:
 				var dir := (player.global_position - global_position).normalized()
 				velocity.x = dir.x * SPEED
+				sprite.flip_h = velocity.x > 0
+				if sprite.animation != "walk":
+					sprite.play("walk")
 			else:
 				velocity.x = 0.0
 				state = State.ATTACK
+				sprite.play("idle")
 
 		State.ATTACK:
 			velocity.x = 0.0
 			_charge = minf(_charge + delta * CHARGE_RATE, 1.0)
-			sprite.scale = Vector2.ONE * (1.0 + _charge * 0.2)
+			var base_scale := Vector2(0.36, 0.36)
+			sprite.scale = base_scale * (1.0 + _charge * 0.2)
+			if sprite.animation != "idle":
+				sprite.play("idle")
 			var dist := global_position.distance_to(player.global_position)
 			if dist > ATTACK_RANGE:
 				_reset_charge()
@@ -75,6 +82,7 @@ func _physics_process(delta: float) -> void:
 				_fist.visible = false
 				_attack_timer = ATTACK_COOLDOWN
 				state = State.ATTACK
+				sprite.play("idle")
 
 		State.HIT:
 			velocity.x = 0.0
@@ -96,11 +104,12 @@ func _on_beat() -> void:
 
 func _reset_charge() -> void:
 	_charge = 0.0
-	sprite.scale = Vector2.ONE
+	sprite.scale = Vector2(0.36, 0.36)
 
 
 func _enter_punch() -> void:
 	_reset_charge()
+	sprite.play("punch")
 	state = State.PUNCH
 	_state_timer = PUNCH_DURATION
 	var dir_to_player: float = sign(player.global_position.x - global_position.x)
@@ -127,17 +136,17 @@ func hit_onbeat() -> void:
 	elif _combo_stage == 3:
 		_combo_stage = 4
 		_combo_timer = COMBO_WINDOW
-		sprite.color = Color(0.6, 0.1, 0.85, 1)
+		sprite.modulate = Color(0.6, 0.1, 0.85, 1)
 		await get_tree().create_timer(0.1).timeout
 		if state != State.DEAD and state != State.HIT:
-			sprite.color = Color(0.1, 0.7, 0.2, 1)
+			sprite.modulate = Color.WHITE
 	elif _combo_stage == 0:
 		_combo_stage = 1
 		_combo_timer = COMBO_WINDOW
-		sprite.color = Color(1, 0.15, 0.15, 1)
+		sprite.modulate = Color(1, 0.15, 0.15, 1)
 		await get_tree().create_timer(0.12).timeout
 		if state != State.DEAD and state != State.HIT:
-			sprite.color = Color(0.1, 0.7, 0.2, 1)
+			sprite.modulate = Color.WHITE
 	else:
 		whiff()
 
@@ -148,17 +157,17 @@ func hit_offbeat() -> void:
 	if _combo_stage == 1:
 		_combo_stage = 0
 		_combo_timer = 0.0
-		sprite.color = Color(0.6, 0.1, 0.85, 1)
+		sprite.modulate = Color(0.6, 0.1, 0.85, 1)
 		await get_tree().create_timer(0.1).timeout
 		if state != State.DEAD:
-			sprite.color = Color(0.1, 0.7, 0.2, 1)
+			sprite.modulate = Color.WHITE
 	elif _combo_stage == 2:
 		_combo_stage = 3
 		_combo_timer = COMBO_WINDOW
-		sprite.color = Color(1, 0.5, 0.0, 1)
+		sprite.modulate = Color(1, 0.5, 0.0, 1)
 		await get_tree().create_timer(0.1).timeout
 		if state != State.DEAD and state != State.HIT:
-			sprite.color = Color(0.1, 0.7, 0.2, 1)
+			sprite.modulate = Color.WHITE
 	else:
 		whiff()
 
@@ -187,26 +196,27 @@ func take_damage(amount: int) -> void:
 		_state_timer = HIT_DURATION
 		await get_tree().create_timer(HIT_DURATION).timeout
 		if state != State.DEAD:
-			sprite.color = Color(0.1, 0.7, 0.2, 1)
+			sprite.modulate = Color.WHITE
 
 
 func whiff() -> void:
 	if state == State.DEAD:
 		return
-	sprite.color = Color(1, 1, 1, 1)
+	sprite.modulate = Color(1, 1, 1, 1)
 	await get_tree().create_timer(0.08).timeout
 	if state != State.DEAD:
-		sprite.color = Color(0.1, 0.7, 0.2, 1)
+		sprite.modulate = Color.WHITE
 
 
 func _die() -> void:
 	state = State.DEAD
 	velocity = Vector2.ZERO
-	sprite.color = Color(1, 0.15, 0.15, 1)
+	sprite.modulate = Color(1, 0.15, 0.15, 1)
 	await get_tree().create_timer(0.1).timeout
+	sprite.modulate = Color.WHITE
 	var tween := create_tween().set_parallel(true)
-	tween.tween_property(sprite, "color:a", 0.0, 0.3)
-	tween.tween_property(sprite, "scale", Vector2(1.6, 0.3), 0.3).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "modulate:a", 0.0, 0.3)
+	tween.tween_property(sprite, "scale", Vector2(0.58, 0.11), 0.3).set_ease(Tween.EASE_OUT)
 	await tween.finished
 	queue_free()
 
@@ -214,11 +224,11 @@ func _die() -> void:
 func _die_uppercut() -> void:
 	state = State.DEAD
 	velocity = Vector2.ZERO
-	sprite.color = Color(0.9, 0.9, 1.0, 1)
+	sprite.modulate = Color(0.9, 0.9, 1.0, 1)
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(self, "position:y", position.y - 800.0, 2.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	tween.tween_property(self, "position:x", position.x + randf_range(-80.0, 80.0), 2.2).set_ease(Tween.EASE_OUT)
-	tween.tween_property(sprite, "color:a", 0.0, 1.8).set_delay(0.4)
-	tween.tween_property(sprite, "scale", Vector2(0.6, 1.4), 2.0).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "modulate:a", 0.0, 1.8).set_delay(0.4)
+	tween.tween_property(sprite, "scale", Vector2(0.22, 0.50), 2.0).set_ease(Tween.EASE_OUT)
 	await tween.finished
 	queue_free()
