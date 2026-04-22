@@ -1,0 +1,224 @@
+extends CharacterBody2D
+
+enum State { APPROACH, ATTACK, PUNCH, HIT, DEAD }
+
+const SPEED := 80.0
+const GRAVITY := 800.0
+const ATTACK_RANGE := 180.0
+const ATTACK_COOLDOWN := 1.2
+const HIT_DURATION := 0.2
+const PUNCH_DURATION := 0.3
+
+var hp := 1
+var state: State = State.APPROACH
+var _state_timer := 0.0
+var _attack_timer := 0.0
+var _fist: ColorRect
+var _beat_count := 0
+var _combo_stage := 0  # 0=none  1=onbeat(wait offbeat)  2=blocked(wait offbeat)  3=blocked+offbeat(wait onbeat)  4=triple done(wait onbeat for quad)
+var _combo_timer := 0.0
+const COMBO_WINDOW := 0.6
+var _charge := 0.0
+const CHARGE_RATE := 0.8
+
+@onready var sprite: ColorRect = $Sprite
+@onready var player: CharacterBody2D = get_node("/root/Main/Player")
+@onready var rhythm_engine: Node = get_node("/root/Main/RhythmEngine")
+
+
+func _ready() -> void:
+	_fist = ColorRect.new()
+	_fist.size = Vector2(36, 36)
+	_fist.color = Color(0.1, 0.9, 0.2, 1)
+	_fist.visible = false
+	add_child(_fist)
+	sprite.pivot_offset = Vector2(45, 90)
+	rhythm_engine.beat_hit.connect(_on_beat)
+
+
+func _physics_process(delta: float) -> void:
+	if state == State.DEAD:
+		return
+
+	if not is_on_floor():
+		velocity.y += GRAVITY * delta
+
+	_state_timer -= delta
+	_attack_timer -= delta
+	if _combo_timer > 0.0:
+		_combo_timer -= delta
+		if _combo_timer <= 0.0:
+			_combo_stage = 0
+
+	match state:
+		State.APPROACH:
+			var dist := global_position.distance_to(player.global_position)
+			if dist > ATTACK_RANGE:
+				var dir := (player.global_position - global_position).normalized()
+				velocity.x = dir.x * SPEED
+			else:
+				velocity.x = 0.0
+				state = State.ATTACK
+
+		State.ATTACK:
+			velocity.x = 0.0
+			_charge = minf(_charge + delta * CHARGE_RATE, 1.0)
+			sprite.scale = Vector2.ONE * (1.0 + _charge * 0.2)
+			var dist := global_position.distance_to(player.global_position)
+			if dist > ATTACK_RANGE:
+				_reset_charge()
+				state = State.APPROACH
+
+		State.PUNCH:
+			velocity.x = 0.0
+			if _state_timer <= 0.0:
+				_fist.visible = false
+				_attack_timer = ATTACK_COOLDOWN
+				state = State.ATTACK
+
+		State.HIT:
+			velocity.x = 0.0
+			if _state_timer <= 0.0:
+				state = State.APPROACH
+
+	move_and_slide()
+
+
+func _on_beat() -> void:
+	_beat_count += 1
+	if _beat_count % 2 != 0:
+		return
+	if state == State.ATTACK:
+		var dist := global_position.distance_to(player.global_position)
+		if dist <= ATTACK_RANGE:
+			_enter_punch()
+
+
+func _reset_charge() -> void:
+	_charge = 0.0
+	sprite.scale = Vector2.ONE
+
+
+func _enter_punch() -> void:
+	_reset_charge()
+	state = State.PUNCH
+	_state_timer = PUNCH_DURATION
+	var dir_to_player: float = sign(player.global_position.x - global_position.x)
+	_fist.position = Vector2(66 * dir_to_player, -114)
+	_fist.visible = true
+	var dist := global_position.distance_to(player.global_position)
+	if dist <= ATTACK_RANGE:
+		if player.is_blocking():
+			player.blocked_hit()
+			_combo_stage = 2
+			_combo_timer = COMBO_WINDOW
+		elif player.is_ducking():
+			pass
+		else:
+			player.take_hit()
+			_combo_stage = 0
+
+
+func hit_onbeat() -> void:
+	if state == State.DEAD or state == State.HIT:
+		return
+	if _combo_stage == 4:
+		whiff()
+	elif _combo_stage == 3:
+		_combo_stage = 4
+		_combo_timer = COMBO_WINDOW
+		sprite.color = Color(0.6, 0.1, 0.85, 1)
+		await get_tree().create_timer(0.1).timeout
+		if state != State.DEAD and state != State.HIT:
+			sprite.color = Color(0.1, 0.7, 0.2, 1)
+	elif _combo_stage == 0:
+		_combo_stage = 1
+		_combo_timer = COMBO_WINDOW
+		sprite.color = Color(1, 0.15, 0.15, 1)
+		await get_tree().create_timer(0.12).timeout
+		if state != State.DEAD and state != State.HIT:
+			sprite.color = Color(0.1, 0.7, 0.2, 1)
+	else:
+		whiff()
+
+
+func hit_offbeat() -> void:
+	if state == State.DEAD or state == State.HIT:
+		return
+	if _combo_stage == 1:
+		_combo_stage = 0
+		_combo_timer = 0.0
+		sprite.color = Color(0.6, 0.1, 0.85, 1)
+		await get_tree().create_timer(0.1).timeout
+		if state != State.DEAD:
+			sprite.color = Color(0.1, 0.7, 0.2, 1)
+	elif _combo_stage == 2:
+		_combo_stage = 3
+		_combo_timer = COMBO_WINDOW
+		sprite.color = Color(1, 0.5, 0.0, 1)
+		await get_tree().create_timer(0.1).timeout
+		if state != State.DEAD and state != State.HIT:
+			sprite.color = Color(0.1, 0.7, 0.2, 1)
+	else:
+		whiff()
+
+
+func hit_uppercut() -> void:
+	if state == State.DEAD or state == State.HIT:
+		return
+	if _combo_stage == 4:
+		_combo_stage = 0
+		_combo_timer = 0.0
+		hp = 0
+		_die_uppercut()
+	else:
+		whiff()
+
+
+func take_damage(amount: int) -> void:
+	if state == State.DEAD or state == State.HIT:
+		return
+	hp -= amount
+	if hp <= 0:
+		_die()
+	else:
+		_reset_charge()
+		state = State.HIT
+		_state_timer = HIT_DURATION
+		await get_tree().create_timer(HIT_DURATION).timeout
+		if state != State.DEAD:
+			sprite.color = Color(0.1, 0.7, 0.2, 1)
+
+
+func whiff() -> void:
+	if state == State.DEAD:
+		return
+	sprite.color = Color(1, 1, 1, 1)
+	await get_tree().create_timer(0.08).timeout
+	if state != State.DEAD:
+		sprite.color = Color(0.1, 0.7, 0.2, 1)
+
+
+func _die() -> void:
+	state = State.DEAD
+	velocity = Vector2.ZERO
+	sprite.color = Color(1, 0.15, 0.15, 1)
+	await get_tree().create_timer(0.1).timeout
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(sprite, "color:a", 0.0, 0.3)
+	tween.tween_property(sprite, "scale", Vector2(1.6, 0.3), 0.3).set_ease(Tween.EASE_OUT)
+	await tween.finished
+	queue_free()
+
+
+func _die_uppercut() -> void:
+	state = State.DEAD
+	velocity = Vector2.ZERO
+	sprite.color = Color(0.9, 0.9, 1.0, 1)
+	var tween := create_tween().set_parallel(true)
+	tween.tween_property(self, "position:y", position.y - 400.0, 2.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tween.tween_property(self, "position:x", position.x + randf_range(-80.0, 80.0), 2.2).set_ease(Tween.EASE_OUT)
+	tween.tween_property(sprite, "color:a", 0.0, 1.8).set_delay(0.4)
+	tween.tween_property(sprite, "scale", Vector2(0.6, 1.4), 2.0).set_ease(Tween.EASE_OUT)
+	await tween.finished
+	queue_free()
