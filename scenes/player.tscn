@@ -1,32 +1,124 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/idle_1.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/idle_2.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/idle_3.png" id="4"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/idle_4.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/idle_5.png" id="6"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/idle_6.png" id="7"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/walk_1.png" id="8"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/walk_2.png" id="9"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/punch_1.png" id="10"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/punch_2.png" id="11"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/block.png" id="12"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/crouch.png" id="13"]
+[ext_resource type="Texture2D" path="res://assets/sprites/player/uppercut.png" id="14"]
 
 [sub_resource type="RectangleShape2D" id="2"]
-size = Vector2(90, 180)
+size = Vector2(180, 360)
 
 [sub_resource type="RectangleShape2D" id="3"]
-size = Vector2(120, 150)
+size = Vector2(240, 300)
+
+[sub_resource type="SpriteFrames" id="4"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("8")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9")
+}],
+"loop": true,
+"name": &"walk",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("10")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11")
+}],
+"loop": false,
+"name": &"punch",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("12")
+}],
+"loop": false,
+"name": &"block",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("13")
+}],
+"loop": false,
+"name": &"crouch",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("14")
+}],
+"loop": false,
+"name": &"uppercut",
+"speed": 1.0
+}]
 
 [node name="Player" type="CharacterBody2D"]
 script = ExtResource("1")
 
-[node name="Sprite" type="ColorRect" parent="."]
-offset_left = -45.0
-offset_top = -180.0
-offset_right = 45.0
-offset_bottom = 0.0
-color = Color(0.2, 0.4, 0.9, 1)
+[node name="Sprite" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, -180)
+scale = Vector2(0.36, 0.36)
+sprite_frames = SubResource("4")
+animation = &"idle"
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(120, -180)
+zoom = Vector2(1.2, 1.2)
+position_smoothing_enabled = true
+position_smoothing_speed = 5.0
+drag_horizontal_enabled = true
+drag_horizontal_offset = 0.2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("2")
-position = Vector2(0, -90)
+position = Vector2(0, -180)
 
 [node name="Hitbox" type="Area2D" parent="."]
 monitoring = false
 
 [node name="HitboxShape" type="CollisionShape2D" parent="Hitbox"]
 shape = SubResource("3")
-position = Vector2(105, -90)
+position = Vector2(210, -180)
 
 [connection signal="body_entered" from="Hitbox" to="." method="_on_hitbox_body_entered"]

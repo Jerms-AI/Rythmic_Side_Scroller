@@ -4,7 +4,7 @@ enum State { APPROACH, ATTACK, PUNCH, HIT, DEAD }
 
 const SPEED := 80.0
 const GRAVITY := 800.0
-const ATTACK_RANGE := 180.0
+const ATTACK_RANGE := 360.0
 const ATTACK_COOLDOWN := 1.2
 const HIT_DURATION := 0.2
 const PUNCH_DURATION := 0.3
@@ -28,11 +28,11 @@ const CHARGE_RATE := 0.8
 
 func _ready() -> void:
 	_fist = ColorRect.new()
-	_fist.size = Vector2(36, 36)
+	_fist.size = Vector2(72, 72)
 	_fist.color = Color(0.1, 0.9, 0.2, 1)
 	_fist.visible = false
 	add_child(_fist)
-	sprite.pivot_offset = Vector2(45, 90)
+	sprite.pivot_offset = Vector2(90, 180)
 	rhythm_engine.beat_hit.connect(_on_beat)
 
 
@@ -104,7 +104,7 @@ func _enter_punch() -> void:
 	state = State.PUNCH
 	_state_timer = PUNCH_DURATION
 	var dir_to_player: float = sign(player.global_position.x - global_position.x)
-	_fist.position = Vector2(66 * dir_to_player, -114)
+	_fist.position = Vector2(132 * dir_to_player, -228)
 	_fist.visible = true
 	var dist := global_position.distance_to(player.global_position)
 	if dist <= ATTACK_RANGE:
@@ -216,7 +216,7 @@ func _die_uppercut() -> void:
 	velocity = Vector2.ZERO
 	sprite.color = Color(0.9, 0.9, 1.0, 1)
 	var tween := create_tween().set_parallel(true)
-	tween.tween_property(self, "position:y", position.y - 400.0, 2.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
+	tween.tween_property(self, "position:y", position.y - 800.0, 2.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUAD)
 	tween.tween_property(self, "position:x", position.x + randf_range(-80.0, 80.0), 2.2).set_ease(Tween.EASE_OUT)
 	tween.tween_property(sprite, "color:a", 0.0, 1.8).set_delay(0.4)
 	tween.tween_property(sprite, "scale", Vector2(0.6, 1.4), 2.0).set_ease(Tween.EASE_OUT)

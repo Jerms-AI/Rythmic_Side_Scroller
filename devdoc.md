@@ -110,6 +110,9 @@ Rhythm engine falls back to BPM clock if JSON is absent. Tap-calibration (T key 
 
 ### Phase 3 — Content & Polish
 - ✅ Player sprite set generated (see `assets/sprites/player/`)
+- ✅ Sprite white background removal pipeline (`strip_bg.py`, auto-runs in `sprite_gen.py`)
+- ✅ Parallax background — 4-layer street-level night scene wired into `main.tscn` (sky, mid alley, near wall, perspective floor)
+- ✅ Player camera follow
 - Player HP and death
 - Boss fight
 - Sound effects, screenshake
@@ -150,7 +153,7 @@ Main (Node2D)
 `AnimatedSprite2D` nodes for all characters — swapping art = replacing `SpriteFrames` resource only.
 
 - **Placeholder:** `ColorRect` nodes. Player = blue (90×180), enemies = green (90×180)
-- **Current:** AI-generated comic-style sprites via Gemini Imagen 4 / gemini-2.5-flash-image
+- **Current:** AI-generated comic-style sprites via Gemini Imagen 4 / gemini-2.5-flash-image (transparent PNG, white bg auto-stripped)
 - **Hand-drawn 2D:** PNG sprite sheets → `SpriteFrames`
 - **Voxel 3D:** `SubViewport` renders 3D to texture → `Sprite2D`
 - **Resolution:** `canvas_items` stretch, base `1280×720`
@@ -186,7 +189,8 @@ Generated with `sprite_gen.py` using Gemini API (`--ref` mode for consistency).
 ```
 Rythmic_Side_Scroller/
 ├── beat_extract.py           # offline beat map generator (librosa)
-├── sprite_gen.py             # Gemini image generator (Imagen 4 / flash-image)
+├── sprite_gen.py             # Gemini image generator (Imagen 4 / flash-image, auto strips bg)
+├── strip_bg.py               # standalone white-bg remover for existing PNGs
 ├── devdoc.md
 ├── project.godot
 ├── .venv/                    # Python venv (librosa + google-genai), WSL only
@@ -208,7 +212,8 @@ Rythmic_Side_Scroller/
     │   └── music/
     ├── beat_maps/
     └── sprites/
-        ├── player/           # final selected sprites (13 files)
+        ├── player/           # final selected sprites (13 files, transparent)
+        ├── background/       # parallax layers: bg_sky_v2_2, bg_mid_v2_2, bg_near_v2_1, bg_floor_v2_2
         └── generated/        # raw AI generation output
 ```
 

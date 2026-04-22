@@ -12,25 +12,25 @@ var _facing := 1
 var _fist: ColorRect
 var _shield: ColorRect
 
-@onready var sprite: ColorRect = $Sprite
+@onready var sprite: AnimatedSprite2D = $Sprite
 @onready var hitbox: Area2D = $Hitbox
 @onready var rhythm_engine: Node = get_node("/root/Main/RhythmEngine")
 
 
 func _ready() -> void:
 	_fist = ColorRect.new()
-	_fist.size = Vector2(48, 48)
+	_fist.size = Vector2(96, 96)
 	_fist.color = Color(0.7, 0.85, 1.0, 1)
 	_fist.visible = false
 	add_child(_fist)
 
 	_shield = ColorRect.new()
-	_shield.size = Vector2(42, 42)
+	_shield.size = Vector2(84, 84)
 	_shield.color = Color(0.95, 0.85, 0.2, 1)
 	_shield.visible = false
 	add_child(_shield)
 
-	sprite.pivot_offset = Vector2(45, 180)
+	sprite.play("idle")
 
 
 func is_blocking() -> bool:
@@ -81,6 +81,7 @@ func _physics_process(delta: float) -> void:
 			if not Input.is_action_pressed("block"):
 				_enter_state(State.IDLE)
 
+	sprite.flip_h = _facing == -1
 	move_and_slide()
 
 
@@ -89,10 +90,14 @@ func _handle_move_input() -> void:
 	if dir != 0.0:
 		_facing = int(sign(dir))
 		velocity.x = dir * SPEED
-		state = State.WALK
+		if state != State.WALK:
+			state = State.WALK
+			sprite.play("walk")
 	else:
 		velocity.x = move_toward(velocity.x, 0, SPEED)
-		state = State.IDLE
+		if state != State.IDLE:
+			state = State.IDLE
+			sprite.play("idle")
 
 
 func _enter_state(new_state: State) -> void:
@@ -101,45 +106,45 @@ func _enter_state(new_state: State) -> void:
 		State.PUNCH:
 			_state_timer = PUNCH_DURATION
 			hitbox.set_deferred("monitoring", true)
-			_fist.position = Vector2(84 * _facing, -114)
+			_fist.position = Vector2(168 * _facing, -228)
 			_fist.visible = true
 			_shield.visible = false
+			sprite.play("punch")
 		State.BLOCK:
 			hitbox.set_deferred("monitoring", false)
 			_fist.visible = false
-			_shield.position = Vector2(66 * _facing, -135)
+			_shield.position = Vector2(132 * _facing, -270)
 			_shield.visible = true
+			sprite.play("block")
 		State.DUCK:
 			hitbox.set_deferred("monitoring", false)
 			_fist.visible = false
 			_shield.visible = false
-			sprite.scale = Vector2(1.0, 0.5)
+			sprite.play("crouch")
 		State.UPPERCUT:
 			_state_timer = PUNCH_DURATION
 			hitbox.set_deferred("monitoring", true)
-			_fist.position = Vector2(42 * _facing, -240)
+			_fist.position = Vector2(84 * _facing, -480)
 			_fist.visible = true
 			_shield.visible = false
-			sprite.scale = Vector2.ONE
+			sprite.play("uppercut")
 		State.IDLE, State.WALK:
 			hitbox.set_deferred("monitoring", false)
 			_fist.visible = false
 			_shield.visible = false
-			sprite.scale = Vector2.ONE
+			sprite.play("idle")
 
 
 func take_hit() -> void:
-	var base_color := Color(0.2, 0.4, 0.9, 1)
-	sprite.color = Color(1, 0.15, 0.15, 1)
+	sprite.modulate = Color(1, 0.15, 0.15, 1)
 	await get_tree().create_timer(0.1).timeout
-	sprite.color = base_color
+	sprite.modulate = Color.WHITE
 
 
 func blocked_hit() -> void:
-	var base_color := Color(0.2, 0.4, 0.9, 1)
-	sprite.color = Color(1, 1, 0.1, 1)
+	sprite.modulate = Color(1, 1, 0.1, 1)
 	await get_tree().create_timer(0.1).timeout
-	sprite.color = base_color
+	sprite.modulate = Color.WHITE
 
 
 func _on_hitbox_body_entered(body: Node) -> void:

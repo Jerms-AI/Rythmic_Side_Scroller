@@ -77,6 +77,35 @@ def pil_to_bytes(img: Image.Image) -> bytes:
     return buf.getvalue()
 
 
+def strip_white_bg(path: Path, threshold: int = 240) -> None:
+    import numpy as np
+    from collections import deque
+    img = Image.open(path).convert("RGBA")
+    arr = np.array(img)
+    h, w = arr.shape[:2]
+    visited = np.zeros((h, w), dtype=bool)
+    queue = deque()
+    for x in range(w):
+        queue.append((0, x))
+        queue.append((h - 1, x))
+    for y in range(1, h - 1):
+        queue.append((y, 0))
+        queue.append((y, w - 1))
+    while queue:
+        y, x = queue.popleft()
+        if visited[y, x]:
+            continue
+        visited[y, x] = True
+        r, g, b = arr[y, x, 0], arr[y, x, 1], arr[y, x, 2]
+        if r >= threshold and g >= threshold and b >= threshold:
+            arr[y, x, 3] = 0
+            for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                ny, nx = y + dy, x + dx
+                if 0 <= ny < h and 0 <= nx < w and not visited[ny, nx]:
+                    queue.append((ny, nx))
+    Image.fromarray(arr).save(path)
+
+
 def generate_sprites(prompt: str, ref_image_path: str | None = None, count: int = 2, fast: bool = False):
     client = genai.Client(api_key=API_KEY)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -86,7 +115,7 @@ def generate_sprites(prompt: str, ref_image_path: str | None = None, count: int 
     base_prompt = (
         f"{prompt}. "
         "2D side-scrolling beat-em-up video game sprite, full body, "
-        "clean white background, sharp outlines, game-ready character art."
+        "transparent background, sharp outlines, game-ready character art."
     )
 
     if ref_image_path:
@@ -125,6 +154,7 @@ def generate_sprites(prompt: str, ref_image_path: str | None = None, count: int 
                     img = Image.open(io.BytesIO(part.inline_data.data))
                     out_path = OUTPUT_DIR / f"{slug}_{timestamp}_{i+1}.png"
                     img.save(out_path)
+                    strip_white_bg(out_path)
                     print(f"Saved: {out_path}")
                     print(f"  tokens — in: {in_tok:,}  out: {out_tok:,}  total: {in_tok+out_tok:,}")
                     print_cost(MODEL_REF, cost)
@@ -150,6 +180,7 @@ def generate_sprites(prompt: str, ref_image_path: str | None = None, count: int 
             img = Image.open(io.BytesIO(img_resp.image.image_bytes))
             out_path = OUTPUT_DIR / f"{slug}_{timestamp}_{i+1}.png"
             img.save(out_path)
+            strip_white_bg(out_path)
             print(f"Saved: {out_path}")
             print_cost(model, img_cost)
             saved.append(out_path)
